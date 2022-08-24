@@ -4,7 +4,11 @@ Unofficial Bot EngDis API.
 บอทสำหรับชาววัยรุ่น kmitl Cs28 คัฟโผม
 
 ## How to use ?
-ก่อนใช้งาน กรุณาลง package ทั้งหมดก่อน
+โคลนโปรเจคนี้ไปเลยยค้าบวัยรุ่นนนนน
+
+``` git clone https://github.com/BossNz/auto-engdis ```
+
+แล้วก็ลง package ทั้งหมดก่อน
 โดยใช้คำสั่ง
 
 ``` npm install ```
