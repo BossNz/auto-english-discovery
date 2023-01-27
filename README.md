@@ -1,7 +1,7 @@
 # Auto EngDis
 Unofficial Bot EngDis API.
 
-บอทสำหรับชาววัยรุ่น kmitl Cs28 คัฟโผม
+บอทสำหรับชาววัยรุ่น KMITL สำหรับวิชา FE1 และ FE2 ค้าบ
 
 ## How to use ?
 โคลนโปรเจคนี้ไปเลยยค้าบวัยรุ่นนนนน
