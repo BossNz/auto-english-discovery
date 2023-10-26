@@ -2,6 +2,7 @@
   "type": "module",
   "dependencies": {
     "axios": "^0.27.2",
+    "clipboardy": "^3.0.0",
     "figlet": "^1.5.2",
     "prompt-sync": "^4.2.0"
   }
