@@ -1,3 +1,4 @@
+import clipboardy from 'clipboardy';
 import figlet from "figlet";
 import PromptSync from "prompt-sync";
 import EngDis from "./lib/engdis.lib.js";
@@ -18,16 +19,16 @@ class Main {
   }
 
   async main() {
-    // await this.getInput();
-    // const loginToken = await this.login();
-    // if (!loginToken) process.exit();
-    // this.engdis = new EngDis(this.setting.baseUrl, loginToken.UserInfo.Token);
-    this.engdis = new EngDis(
-      baseUrlFe2,
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1MjMyOTU3MDg5NTM5IiwibmJmIjoxNjc0ODAzMTY4LCJleHAiOjE2NzQ4MTAzNjgsImlhdCI6MTY3NDgwMzE2OH0.5pdcoxLDwuhKq26zO7gzMZRidriMWg-wNOw6094KTKA"
-    );
+    await this.getInput();
+    const loginToken = await this.login();
+    if (!loginToken) process.exit();
+    this.engdis = new EngDis(this.setting.baseUrl, loginToken.UserInfo.Token);
     let courses = await this.selectCourse();
     await this.setTaskSuccess(courses);
+
+    const progress = await this.engdis.getProgress();
+    console.log("Progress:", progress[0], "Grade:", progress[1])
+
     // await this.logout();
   }
 
@@ -42,6 +43,7 @@ class Main {
     console.log("\n[*] waiting logout...");
     await this.engdis.Logout();
     console.log("[#] logout success, see u soon.");
+    // process.exit();
   }
 
   async getInput() {
@@ -50,9 +52,9 @@ class Main {
         ? baseUrlFe1
         : baseUrlFe2;
     this.setting.username = await prompt("[?] enter your studentID  : ");
-    this.setting.password = this.setting.username.replace("650", "");
-    // this.setting.username = await prompt("[?] enter your username  : ");
-    // this.setting.password = await prompt("[?] enter your passsword : ");
+    this.setting.baseUrl = baseUrlFe2
+    // this.setting.username = "65050368"
+    this.setting.password = this.setting.username.slice(-5);
     console.log();
   }
 
@@ -70,7 +72,7 @@ class Main {
         "[!] please logout from website before use bot and try again."
       );
     } else {
-      console.log("[#] login success.\n");
+      console.log(`[#] login with success.\n`);
       return result;
     }
     return;
@@ -79,9 +81,8 @@ class Main {
   async selectCourse() {
     let courseProgressListTable = [];
     let courseTmp = [];
-    // const selectAllCourse =
-    // (await prompt("[?] select all course (y/n) : ")) == "y" ? true : false;
-    const selectAllCourse = false;
+    const selectAllCourse = (await prompt("[?] select all course (y/n) : ")) == "y" ? true : false;
+    // const selectAllCourse = false
 
     console.log();
     var courseProgressList = await this.engdis.getGetDefaultCourseProgress();
@@ -108,8 +109,8 @@ class Main {
     if (selectAllCourse) return courseTmp;
 
     console.table(courseProgressListTable);
-    // const selectId = await prompt("[?] select id or index : ");
-    const selectId = 0;
+    const selectId = await prompt("[?] select id or index : ");
+    // const selectId = 8;
 
     var find = courseProgressList.data.find(
       (ele, index) => ele.NodeId == selectId || index == selectId
@@ -120,7 +121,7 @@ class Main {
       return [];
     }
 
-    console.log(`[#] you choose course ( ${find.Name} )`);
+    // console.log(`[#] you choose course ( ${find.Name} )`);
     courseTmp.push({
       NodeId: find.NodeId,
       ParentNodeId: find.ParentNodeId,
@@ -134,67 +135,116 @@ class Main {
         course.NodeId,
         course.ParentNodeId
       );
-      console.log(course.NodeId);
-      let checked = false;
+      
       await courseTree.data.map(async (item) => {
-        // console.log(`\n[*] checking ( ${item.Name} )`);
+        console.log(`\n[*] checking ( ${item.Name} )`);
+
         await item.Children.map(async (elem) => {
-          if (elem.Name == "Test" && checked == false) {
-            checked = true;
-            this.test100Percent(
-              course.NodeId,
-              elem.ParentNodeId,
-              elem.Children,
-              item.Metadata.Code
-            );
-            // process.exit();
+          if (elem.Name != "Test") {
+            console.log(`[#] checking ${elem.Name}`);
+
+            elem.Children.map(async (ele) => {
+              await this.engdis.setSucessTask(
+                course.ParentNodeId,
+                ele.NodeId
+              );
+            });
           } else {
-            // console.log(`[#] checking ${elem.Name}`);
-            // elem.Children.map(async (ele) => {
-            //   if (!ele.IsDone) {
-            //     await this.engdis.setSucessTask(
-            //       course.ParentNodeId,
-            //       ele.NodeId
-            //     );
-            //     console.log(elem);
-            //   }
-            // });
+            console.log(`[#] checking ${elem.Name}`)
+            await this.setTest100Percent(item["Metadata"]["Code"], item["NodeId"], item["ParentNodeId"])
           }
         });
       });
+
+      // for (const item of courseTree["data"]) {
+      //   console.log(`\n[*] checking ( ${item.Name} )`);
+
+      //   for (const elem of item["Children"]) {
+      //     if (elem.Name != "Test") {
+      //       console.log(`[#] checking ${elem.Name}`);
+
+      //       for (const ele of elem["Children"]) {
+      //         await this.engdis.setSucessTask(
+      //           course.ParentNodeId,
+      //           ele.NodeId
+      //         );
+      //       }
+      //     } else {
+      //       console.log(`[#] checking ${elem.Name}`)
+      //       await this.setTest100Percent(item["Metadata"]["Code"], item["NodeId"], item["ParentNodeId"])
+      //     }
+      //   }
+      // }
+
     }
   }
-  async test100Percent(nodeId, ParentNodeId, children, code) {
-    let bodySend = [];
-    for (let i = 0; children.length > i; i++) {
-      let el = children[i];
-      let number = i + 1;
-      let body = {
-        iId: el.NodeId,
-        iCode: code + "t" + String(number).padStart(2, "0"),
-        iType: "25",
-        ua: [],
-        bId: [],
-      };
-      var result = await this.engdis.practiceGetItem(el.NodeId, code, number);
-      for (let ii = 0; result.data.i.q > ii; i++) {
-      let ele = esult.data.i.q[i];
-        console.log(ele)
-        body.ua = [
-          {
-            qId: 1,
-            aId: [[1, ele.al[0].a.findIndex((ele) => ele.c == "1")]],
-          },
-        ];
-        ele.al[0].a.map((elel, ii) => {
-          body.bId.push(ii + 1);
-        });
-        bodySend.push(body);
-        console.log(ii);
+
+  async setTest100Percent(code, nodeId, parentNodeId) {
+    const testData = await this.engdis.getTestCodeDigit(code)
+    var submitAnswer = [];
+
+    for (var data of testData["tasks"]) {
+      const id = data["id"]
+      const code = data["code"]
+      const type = data["type"]
+      const testAnswerData = await this.engdis.practiceGetItem(code)
+
+      if (testAnswerData["data"]["i"]["q"].length > 1) {
+        for (var i = 1; i < testAnswerData["data"]["i"]["q"].length; i++) {
+          testAnswerData["data"]["i"]["q"][0]["al"] = testAnswerData["data"]["i"]["q"][0]["al"].concat(testAnswerData["data"]["i"]["q"][i]["al"])
+        }
+      }
+
+      const correctAnswerList = testAnswerData["data"]["i"]["q"][0]["al"]
+
+      if (correctAnswerList.length == 0) continue
+      const foundC = correctAnswerList[0]["a"].filter(item => item["c"] == "1")
+
+      if (foundC.length != 0) {
+        const answerUa = correctAnswerList.map(obj => [obj.id, obj.a.find(answer => answer.c === '1').id]);
+        
+        submitAnswer.push({
+          "iId"	:	id,
+          "iCode"	:	code,
+          "iType"	: type,
+          "ua": [
+            {
+                "qId": 1,
+                "aId": answerUa
+            }
+          ]
+        })
+      } else {
+        var uaList = [];
+
+        for (const ans of correctAnswerList) {
+          uaList.push(              {
+            "qId": "1",
+            "aId": [
+                [
+                    ans["id"],
+                    ans["a"][0]["id"]
+                ]
+            ]
+          })
+        }
+
+        submitAnswer.push({
+          "iId": id,
+          "iCode": code,
+          "iType": type,
+          "ua": uaList
+        })
       }
     }
-    console.log(bodySend);
-    // this.engdis.SaveUserTestV1(nodeId, ParentNodeId, bodySend);
+
+    const testStatus = await this.engdis.SaveUserTestV1(nodeId, parentNodeId, submitAnswer)
+    console.log(testStatus["data"]["finalMark"])
+
+    if (testStatus["data"]["finalMark"] != "100") {
+      clipboardy.writeSync(JSON.stringify(submitAnswer))
+      console.log(testStatus["data"]["finalMark"])
+    }
   }
 }
 
